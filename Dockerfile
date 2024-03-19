@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM ghcr.io/linuxserver/baseimage-alpine:3.19
+FROM ghcr.io/linuxserver/baseimage-debian:bookworm
 
 # set version label
 ARG BUILD_DATE
@@ -13,11 +13,14 @@ ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 
 RUN \
   echo "**** install runtime packages ****" && \
-  apk add --no-cache \
+  apt-get update && \
+  apt-get install -y --no-install-recommends \
     fail2ban \
+    python3-systemd \
     logrotate \
     msmtp \
     nftables \
+    iptables \
     whois && \
   echo "**** copy fail2ban confs to /defaults ****" && \
   mkdir -p \
@@ -32,8 +35,9 @@ RUN \
   sed -i "s#/var/log/messages {}.*# #g" \
     /etc/logrotate.conf && \
   sed -i 's#/usr/sbin/logrotate /etc/logrotate.conf#/usr/sbin/logrotate /etc/logrotate.conf -s /config/log/logrotate.status#g' \
-    /etc/periodic/daily/logrotate && \
+    /etc/cron.daily/logrotate && \
   echo "**** cleanup ****" && \
+  apt-mark auto '.*' > /dev/null && \
   rm -rf \
     /tmp/* \
     $HOME/.cache
